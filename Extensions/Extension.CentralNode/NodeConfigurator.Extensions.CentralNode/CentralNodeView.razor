@@ -1,0 +1,57 @@
+@implements IDisposable
+
+<div class="ext-panel">
+    <h3>Central node</h3>
+    <p class="ext-help">
+        Set this computer as the central node? Only one node can be the central node.
+    </p>
+
+    <label class="ext-field">
+        <span>Set this computer as the central node?</span>
+        <select value="@(IsThisCentral ? "yes" : "no")" @onchange="OnChanged" disabled="@IsDisabled">
+            <option value="no">No, not central</option>
+            <option value="yes">Yes, set as central</option>
+        </select>
+    </label>
+
+    @if (IsDisabled)
+    {
+        <p class="ext-help">@CentralNodeName is already the central node.</p>
+    }
+</div>
+
+@code {
+    /// <summary>Host-provided services for this extension.</summary>
+    [Parameter] public IExtensionContext Context { get; set; } = default!;
+
+    /// <summary>The id of the node this editor is rendering for.</summary>
+    [Parameter] public string NodeId { get; set; } = default!;
+
+    [Inject] private CentralNodeExtension Extension { get; set; } = default!;
+
+    private bool IsThisCentral =>
+        string.Equals(Extension.CentralNodeId, NodeId, StringComparison.Ordinal);
+
+    private bool AnyCentral => !string.IsNullOrEmpty(Extension.CentralNodeId);
+
+    // Disabled on every node except the one that is already central.
+    private bool IsDisabled => AnyCentral && !IsThisCentral;
+
+    private string CentralNodeName =>
+        Context.Nodes.FirstOrDefault(n => n.Id == Extension.CentralNodeId)?.Name
+        ?? Extension.CentralNodeId
+        ?? string.Empty;
+
+    private void OnChanged(ChangeEventArgs e)
+    {
+        var choice = e.Value as string;
+        Extension.SetCentral(string.Equals(choice, "yes", StringComparison.Ordinal) ? NodeId : null);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Navigating away from this node (or selecting another) triggers a save of the whole snapshot.
+        Context.Bus.Publish(new BusMessage($"{Extension.Id}.save", Extension.Id, default));
+    }
+}

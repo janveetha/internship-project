@@ -1,0 +1,102 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <!-- Windows-only targeting -->
+        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+
+        <OutputType>Exe</OutputType>
+        <RootNamespace>NodeConfigurator.Host</RootNamespace>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        <Nullable>enable</Nullable>
+
+        <!-- Only emit English satellite resources to keep bin free of dozens of language folders. -->
+        <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+        <!-- Enable XAML source generation for faster build times and improved performance. -->
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+        <!-- Display name -->
+        <ApplicationTitle>NodeConfigurator.Host</ApplicationTitle>
+
+        <!-- App Identifier -->
+        <ApplicationId>com.companyname.nodeconfigurator.host</ApplicationId>
+
+        <!-- Versions -->
+        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+
+        <!-- Unpackaged Windows app (no MSIX) -->
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <!-- Windows platform versions -->
+        <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- App Icon -->
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+
+        <!-- Splash Screen -->
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+
+        <!-- Images -->
+        <MauiImage Include="Resources\Images\*" />
+        <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
+
+        <!-- Custom Fonts -->
+        <MauiFont Include="Resources\Fonts\*" />
+
+        <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- appsettings.json is included by default; just ensure it copies to output -->
+        <Content Update="appsettings.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\NodeConfigurator.Abstractions\NodeConfigurator.Abstractions.csproj" />
+      <ProjectReference Include="..\NodeConfigurator.Core\NodeConfigurator.Core.csproj" />
+      <!-- Extensions are now loaded at runtime from plugin folders.
+           Remove these project references to fully decouple the host from extensions.
+           Each extension team builds and deploys their plugin independently. -->
+      <!-- <ProjectReference Include="..\NodeConfigurator.Extensions.CentralNode\NodeConfigurator.Extensions.CentralNode.csproj" /> -->
+      <!-- <ProjectReference Include="..\NodeConfigurator.Extensions.Identity\NodeConfigurator.Extensions.Identity.csproj" /> -->
+      <!-- <ProjectReference Include="..\NodeConfigurator.Extensions.Mode\NodeConfigurator.Extensions.Mode.csproj" /> -->
+    </ItemGroup>
+
+    <!-- Tidy up the output: remove localized WinUI / Windows App SDK language resource folders.
+         A localized folder (e.g. af-ZA, de-DE, fr-FR, ja-JP, zh-CN) contains ONLY .mui resource files.
+         Required folders (wwwroot, Components, runtimes, Microsoft.UI.Xaml, ...) hold non-.mui content
+         so they are never matched. en-US is preserved explicitly. RemoveDir keeps this idempotent. -->
+    <Target Name="RemoveLocalizedResourceFolders" AfterTargets="Build;Publish">
+        <ItemGroup>
+            <!-- Folders that contain at least one .mui resource file -->
+            <MuiResourceFiles Include="$(OutDir)**\*.mui" />
+            <MuiResourceFolders Include="@(MuiResourceFiles->'%(RootDir)%(Directory)')" />
+            <!-- Folders that contain any non-.mui content must be kept -->
+            <NonMuiFiles Include="$(OutDir)**\*" Exclude="$(OutDir)**\*.mui" />
+            <NonMuiFolders Include="@(NonMuiFiles->'%(RootDir)%(Directory)')" />
+            <!-- Culture/localized folders = .mui-only folders, excluding en-US -->
+            <LocalizedResourceFolders Include="@(MuiResourceFolders->Distinct())"
+                                      Exclude="@(NonMuiFolders->Distinct());$(OutDir)en-US\" />
+        </ItemGroup>
+        <RemoveDir Directories="@(LocalizedResourceFolders)" />
+    </Target>
+
+</Project>

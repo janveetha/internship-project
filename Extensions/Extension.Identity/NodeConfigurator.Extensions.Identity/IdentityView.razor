@@ -1,0 +1,115 @@
+@implements IDisposable
+
+<div class="ext-panel">
+    <h3>Identity</h3>
+
+    <p class="ext-help">Select an identity provider for the central node.</p>
+
+    <label class="ext-field">
+        <span>Provider</span>
+        <select value="@Extension.Provider" @onchange="OnProviderChanged">
+            @foreach (var provider in Enum.GetValues<IdentityProvider>())
+            {
+                <option value="@provider">@provider</option>
+            }
+        </select>
+    </label>
+
+    @if (Extension.Provider is IdentityProvider.GitHub or IdentityProvider.EntraID or IdentityProvider.PingID)
+    {
+        <label class="ext-field">
+            <span>Email</span>
+            <input type="email" value="@Extension.Email" @oninput="OnEmailChanged" />
+        </label>
+    }
+
+    @if (Extension.Provider == IdentityProvider.EntraID)
+    {
+        <label class="ext-field">
+            <span>Tenant</span>
+            <input type="text" value="@Extension.Tenant" @oninput="OnTenantChanged" />
+        </label>
+    }
+
+    @if (Extension.Provider == IdentityProvider.PingID)
+    {
+        <label class="ext-field">
+            <span>PIN</span>
+            <input type="text" value="@Extension.Pin" @oninput="OnPinChanged" />
+        </label>
+    }
+
+    @if (!_valid)
+    {
+        <p class="ext-conflict" role="alert">⚠ @_error</p>
+    }
+</div>
+
+@code {
+    /// <summary>Host-provided services for this extension.</summary>
+    [Parameter] public IExtensionContext Context { get; set; } = default!;
+
+    /// <summary>The id of the node this editor is rendering for (always the central node).</summary>
+    [Parameter] public string NodeId { get; set; } = default!;
+
+    [Inject] private IdentityExtension Extension { get; set; } = default!;
+
+    private readonly List<IDisposable> _subscriptions = new();
+    private bool _valid = true;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        // Re-validate whenever mode or the central node changes, in any order.
+        _subscriptions.Add(Context.Bus.Subscribe("ext.mode.changed", _ => OnExternalChange()));
+        _subscriptions.Add(Context.Bus.Subscribe("ext.central.changed", _ => OnExternalChange()));
+        Revalidate();
+    }
+
+    private void OnExternalChange() => InvokeAsync(() =>
+    {
+        Revalidate();
+        StateHasChanged();
+    });
+
+    private void Revalidate() => _valid = Extension.Validate(out _error);
+
+    private void OnProviderChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<IdentityProvider>(e.Value as string, out var provider))
+            Extension.SetProvider(provider);
+
+        Revalidate();
+        StateHasChanged();
+    }
+
+    private void OnEmailChanged(ChangeEventArgs e)
+    {
+        Extension.SetEmail(e.Value as string);
+        Revalidate();
+        StateHasChanged();
+    }
+
+    private void OnTenantChanged(ChangeEventArgs e)
+    {
+        Extension.SetTenant(e.Value as string);
+        Revalidate();
+        StateHasChanged();
+    }
+
+    private void OnPinChanged(ChangeEventArgs e)
+    {
+        Extension.SetPin(e.Value as string);
+        Revalidate();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+
+        // Navigating away from this extension triggers a save of the whole snapshot.
+        Context.Bus.Publish(new BusMessage($"{Extension.Id}.save", Extension.Id, default));
+    }
+}

@@ -1,0 +1,211 @@
+@page "/"
+@implements IDisposable
+@inject AppInitializer Initializer
+@inject INavigationService Navigation
+@inject IExtensionContext Context
+@inject ISaveCoordinator SaveCoordinator
+@inject IEnumerable<IExtension> Extensions
+
+<div class="shell">
+    <aside class="shell-sidebar">
+        <section class="sidebar-section">
+            <h2 class="sidebar-heading">Nodes</h2>
+            <ul class="sidebar-list">
+                @foreach (var node in Context.Nodes)
+                {
+                    var conflict = NodeConflict(node.Id);
+                    <li>
+                        <button class="sidebar-item @(IsNodeSelected(node.Id) ? "selected" : string.Empty)"
+                                @onclick="() => SelectNode(node.Id)">
+                            <span>@node.Name</span>
+                            @if (conflict is not null)
+                            {
+                                <span class="ext-badge" title="@conflict">!</span>
+                            }
+                        </button>
+                    </li>
+                }
+            </ul>
+        </section>
+
+        <section class="sidebar-section">
+            <h2 class="sidebar-heading">Configure</h2>
+            <ul class="sidebar-list">
+                @foreach (var ext in ConfigureExtensions)
+                {
+                    <li>
+                        <button class="sidebar-item @(IsExtensionSelected(ext.Id) ? "selected" : string.Empty)"
+                                @onclick="() => ActivateExtension(ext.Id)">
+                            <span>@ext.DisplayName</span>
+                        </button>
+                    </li>
+                }
+            </ul>
+        </section>
+    </aside>
+
+    <main class="shell-main">
+        <header class="shell-header">
+            <h1>NodeConfigurator</h1>
+            <button class="save-button" @onclick="SaveAsync">Save</button>
+        </header>
+
+        @if (Navigation.ActivePane == ActivePane.Node)
+        {
+            @if (SelectedNode is { } selected)
+            {
+                <section class="node-details">
+                    <h2>@selected.Name</h2>
+                    <table class="detail-table">
+                        <tbody>
+                            @foreach (var detail in GetDetails(selected.Id))
+                            {
+                                <tr>
+                                    <th scope="row">@detail.Label</th>
+                                    <td>@detail.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
+
+                @foreach (var editor in NodeEditors)
+                {
+                    if (editor.RendersForNode(selected.Id))
+                    {
+                        <section class="node-editor">
+                            <DynamicComponent @key="@($"{editor.NodeEditorComponentType.FullName}:{selected.Id}")"
+                                              Type="editor.NodeEditorComponentType"
+                                              Parameters="BuildEditorParameters(selected.Id)" />
+                        </section>
+                    }
+                }
+            }
+            else
+            {
+                <section class="node-details">
+                    <p class="shell-empty">No node selected.</p>
+                </section>
+            }
+        }
+        else
+        {
+            <section class="ext-content">
+                @if (ActiveExtension is { } active)
+                {
+                    <DynamicComponent Type="active.ComponentType" Parameters="_componentParameters" />
+                }
+                else
+                {
+                    <p class="shell-empty">No configuration selected.</p>
+                }
+            </section>
+        }
+    </main>
+</div>
+
+@code {
+    private readonly Dictionary<string, object> _componentParameters = new();
+    private readonly List<IDisposable> _subscriptions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _componentParameters["Context"] = Context;
+
+        Navigation.NodeChanged += OnStateChanged;
+        Navigation.ExtensionChanged += OnStateChanged;
+        Navigation.PaneChanged += OnStateChanged;
+        Context.SharedState.Changed += OnSharedStateChanged;
+
+        // Keep the node details table and the per-node conflict badge live when the
+        // central choice or identity configuration changes (identity changes do not
+        // flow through shared state, so subscribe to its bus topic explicitly).
+        _subscriptions.Add(Context.Bus.Subscribe("ext.central.changed", _ => OnStateChanged()));
+        _subscriptions.Add(Context.Bus.Subscribe("ext.identity.changed", _ => OnStateChanged()));
+
+        await Initializer.InitializeAsync();
+    }
+
+    private Node? SelectedNode =>
+        Context.Nodes.FirstOrDefault(n => n.Id == Navigation.SelectedNodeId);
+
+    private IExtension? ActiveExtension =>
+        Extensions.FirstOrDefault(e => e.Id == Navigation.ActiveExtensionId);
+
+    // Central and identity are edited inline on each node's page, so only the
+    // remaining (non node-editor) extensions appear in the Configure sidebar.
+    private IEnumerable<IExtension> ConfigureExtensions =>
+        Extensions.Where(e => e is not INodeEditorContributor);
+
+    // Node-scoped editors composed under a node's details, in registration order
+    // (central first, then identity).
+    private IEnumerable<INodeEditorContributor> NodeEditors =>
+        Extensions.OfType<INodeEditorContributor>();
+
+    private bool IsNodeSelected(string id) =>
+        Navigation.ActivePane == ActivePane.Node &&
+        string.Equals(Navigation.SelectedNodeId, id, StringComparison.Ordinal);
+
+    private bool IsExtensionSelected(string id) =>
+        Navigation.ActivePane == ActivePane.Extension &&
+        string.Equals(Navigation.ActiveExtensionId, id, StringComparison.Ordinal);
+
+    private void SelectNode(string id) => Navigation.SelectNode(id);
+
+    private void ActivateExtension(string id) => Navigation.ActivateExtension(id);
+
+    // Returns the conflict message to show on a node's row, or null when there is none.
+    // Checks all extensions that implement validation for any conflicts on this node.
+    private string? NodeConflict(string nodeId)
+    {
+        // Only the central node can have conflicts
+        if (!string.Equals(Context.SharedState.CentralNodeId, nodeId, StringComparison.Ordinal))
+            return null;
+
+        // Check all extensions for validation errors
+        foreach (var ext in Extensions)
+        {
+            if (!ext.Validate(out var error) && !string.IsNullOrEmpty(error))
+            {
+                return error;
+            }
+        }
+
+        return null;
+    }
+
+    // Parameters passed to each node-scoped editor component.
+    private Dictionary<string, object> BuildEditorParameters(string nodeId) => new()
+    {
+        ["Context"] = Context,
+        ["NodeId"] = nodeId
+    };
+
+    private IEnumerable<NodeDetail> GetDetails(string nodeId)
+    {
+        yield return new NodeDetail("Name", SelectedNode?.Name ?? string.Empty);
+
+        foreach (var contributor in Extensions.OfType<IDetailContributor>())
+        {
+            foreach (var detail in contributor.GetDetailsFor(nodeId))
+                yield return detail;
+        }
+    }
+
+    private async Task SaveAsync() => await SaveCoordinator.SaveNow();
+
+    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnSharedStateChanged(string key) => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        foreach (var subscription in _subscriptions)
+            subscription.Dispose();
+
+        Navigation.NodeChanged -= OnStateChanged;
+        Navigation.ExtensionChanged -= OnStateChanged;
+        Navigation.PaneChanged -= OnStateChanged;
+        Context.SharedState.Changed -= OnSharedStateChanged;
+    }
+}

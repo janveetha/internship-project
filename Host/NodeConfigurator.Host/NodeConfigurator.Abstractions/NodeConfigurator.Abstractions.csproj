@@ -1,0 +1,52 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         NuGet Package Configuration
+         This is the SHARED CONTRACT assembly that both the Host and all plugins
+         reference. It defines IExtension, IExtensionContext, models, and events.
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>NodeConfigurator.Abstractions</PackageId>
+
+    <!-- Semantic Versioning: MAJOR.MINOR.PATCH
+         - MAJOR: Breaking changes (removed/renamed types, changed signatures)
+         - MINOR: Additive changes (new interfaces, new optional members)
+         - PATCH: Bug fixes, documentation, no API changes -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+
+    <!-- Package Metadata -->
+    <Authors>NodeConfigurator Team</Authors>
+    <Company>Your Company</Company>
+    <Description>Shared contract interfaces and models for NodeConfigurator extensions. Reference this package to build plugins that integrate with the NodeConfigurator host.</Description>
+    <PackageTags>nodeconfigurator;plugin;extension;contract</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Repository info (update with your actual repo) -->
+    <RepositoryUrl>https://github.com/your-org/NodeConfigurator</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Include symbols for debugging -->
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <!-- Deterministic builds for reproducibility -->
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- Include README in package -->
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" Condition="Exists('README.md')" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+</Project>

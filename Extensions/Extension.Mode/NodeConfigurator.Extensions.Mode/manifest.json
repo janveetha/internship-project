@@ -1,0 +1,9 @@
+{
+  "id": "ext.mode",
+  "displayName": "Mode",
+  "version": "1.0.0",
+  "contractVersion": "1.0.0",
+  "entryAssembly": "NodeConfigurator.Extensions.Mode.dll",
+  "entryType": "NodeConfigurator.Extensions.Mode.ModeExtension",
+  "hasStaticAssets": true
+}

@@ -1,0 +1,7 @@
+﻿<Project>
+  <PropertyGroup>
+    <GenerateSatelliteAssemblies>false</GenerateSatelliteAssemblies>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+</Project>

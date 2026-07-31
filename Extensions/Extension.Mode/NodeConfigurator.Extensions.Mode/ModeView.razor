@@ -1,0 +1,36 @@
+@implements IDisposable
+
+<div class="ext-panel">
+    <h3>Mode</h3>
+    <p class="ext-help">Choose the application mode. This is not tied to any node.</p>
+
+    <label class="ext-field">
+        <span>Mode</span>
+        <select value="@Extension.Mode" @onchange="OnModeChanged">
+            <option value="@ModeExtension.Disconnected">Disconnected</option>
+            <option value="@ModeExtension.Connected">Connected</option>
+        </select>
+    </label>
+</div>
+
+@code {
+    /// <summary>Host-provided services for this extension.</summary>
+    [Parameter] public IExtensionContext Context { get; set; } = default!;
+
+    [Inject] private ModeExtension Extension { get; set; } = default!;
+
+    private void OnModeChanged(ChangeEventArgs e)
+    {
+        var mode = e.Value as string;
+        if (!string.IsNullOrEmpty(mode))
+            Extension.SetMode(mode);
+
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Navigating away from this extension triggers a save of the whole snapshot.
+        Context.Bus.Publish(new BusMessage($"{Extension.Id}.save", Extension.Id, default));
+    }
+}

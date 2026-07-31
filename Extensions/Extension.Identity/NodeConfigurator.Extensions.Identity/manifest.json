@@ -1,0 +1,9 @@
+{
+  "id": "ext.identity",
+  "displayName": "Identity",
+  "version": "1.0.0",
+  "contractVersion": "1.0.0",
+  "entryAssembly": "NodeConfigurator.Extensions.Identity.dll",
+  "entryType": "NodeConfigurator.Extensions.Identity.IdentityExtension",
+  "hasStaticAssets": true
+}

@@ -1,0 +1,51 @@
+<!--
+  Sample .csproj for an extension built in a SEPARATE solution by another team.
+
+  This demonstrates how to:
+  1. Reference NodeConfigurator.Abstractions via PackageReference (not ProjectReference)
+  2. Configure the plugin for runtime loading
+  3. Exclude Abstractions from the output (host provides it)
+-->
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<Nullable>enable</Nullable>
+	<ImplicitUsings>enable</ImplicitUsings>
+
+	<!-- Plugin output settings -->
+	<EnableDynamicLoading>true</EnableDynamicLoading>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<!-- Blazor component support -->
+	<PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
+
+	<!--
+	  CRITICAL: Reference Abstractions as a package, NOT a project.
+
+	  ExcludeAssets="runtime" prevents the DLL from being copied to output.
+	  The host already has this assembly loaded, and the PluginLoadContext
+	  falls back to the host's copy to ensure type identity.
+
+	  If you copy Abstractions.dll to the plugin folder, the ALC might load
+	  a duplicate, causing "type X is not assignable to type X" errors.
+	-->
+	<PackageReference Include="NodeConfigurator.Abstractions" Version="1.0.0">
+	  <ExcludeAssets>runtime</ExcludeAssets>
+	</PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+	<!-- Include manifest.json in output directory -->
+	<None Include="manifest.json">
+	  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</None>
+  </ItemGroup>
+
+</Project>

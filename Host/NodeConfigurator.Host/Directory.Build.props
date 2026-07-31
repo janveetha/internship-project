@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+	<!-- Disable satellite assembly generation; no localization is used in this solution. -->
+	<GenerateSatelliteAssemblies>false</GenerateSatelliteAssemblies>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,9 @@
+{
+  "id": "ext.central",
+  "displayName": "Central Node",
+  "version": "1.0.0",
+  "contractVersion": "1.0.0",
+  "entryAssembly": "NodeConfigurator.Extensions.CentralNode.dll",
+  "entryType": "NodeConfigurator.Extensions.CentralNode.CentralNodeExtension",
+  "hasStaticAssets": true
+}

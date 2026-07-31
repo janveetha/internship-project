@@ -1,0 +1,10 @@
+﻿<Project>
+  <PropertyGroup>
+    <!-- Disable satellite assembly generation -->
+    <GenerateSatelliteAssemblies>false</GenerateSatelliteAssemblies>
+    
+    <!-- Plugin output settings (inherited by all projects in this repo) -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+</Project>

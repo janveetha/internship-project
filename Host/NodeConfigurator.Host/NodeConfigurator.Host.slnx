@@ -1,0 +1,7 @@
+﻿<Solution>
+  <Project Path="NodeConfigurator.Abstractions/NodeConfigurator.Abstractions.csproj" />
+  <Project Path="NodeConfigurator.Core/NodeConfigurator.Core.csproj" />
+  <Project Path="NodeConfigurator.Host/NodeConfigurator.Host.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>
